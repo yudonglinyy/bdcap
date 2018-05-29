@@ -200,6 +200,7 @@ void start_sniff(int filenum)
         getApName(pOut,apname);                         //get apname
         getnowdate(timebuf);                            //get timebuf
         linenum++;
+        perminnum++;
 
         if((fp = fopen(filename,"a"))==NULL)
         {
@@ -320,10 +321,11 @@ bool match(char *src, regex_t *reg, char *destBuf, size_t length )   //match reg
 
 void getManu(char *mac, char *manu, int len)
 {
-    char cmd[1024], buffer[1024], mac6[6];
+    char cmd[1024], buffer[1024], mac6[7];
     FILE *pManu;
 
     strip_mac(mac, mac6, sizeof(mac6));
+    mac6[6] = '\0';
     memset(manu,0,len);
 
     sprintf(cmd,"/bin/grep -q %s oui.txt",mac6);
