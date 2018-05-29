@@ -1,6 +1,7 @@
 # coding: utf-8
 
 #v0.1.0  修改程序异常不自动退出，等待一段时间循环尝试   20180301
+#v0.1.1  count字符错误 20180529
 
 import time
 import pymongo
@@ -128,10 +129,10 @@ def update_item(item_info):
 
             if update_apname_flag:
                 unique_mac.update_one({'_id': id}, {
-                    '$set': {"count": counts, "end_time": end_time, "midtime": mid_time, "apname_list": apname_list,
+                    '$set': {"counts": counts, "end_time": end_time, "midtime": mid_time, "apname_list": apname_list,
                              "apname_no_empty": apname_no_empty}})
             else:
-                unique_mac.update_one({'_id': id}, {'$set': {"count": counts, "end_time": end_time, "midtime": mid_time}})
+                unique_mac.update_one({'_id': id}, {'$set': {"counts": counts, "end_time": end_time, "midtime": mid_time}})
 
             return
 
@@ -149,10 +150,10 @@ def update_item(item_info):
 
             if update_apname_flag:
                 unique_mac.update_one({'_id': id}, {
-                    '$set': {"count": counts, "start_time": start_time, "midtime": mid_time, "apname_list": apname_list,
+                    '$set': {"counts": counts, "start_time": start_time, "midtime": mid_time, "apname_list": apname_list,
                              "apname_no_empty": apname_no_empty}})
             else:
-                unique_mac.update_one({'_id': id}, {'$set': {"count": counts, "start_time": start_time, "midtime": mid_time}})
+                unique_mac.update_one({'_id': id}, {'$set': {"counts": counts, "start_time": start_time, "midtime": mid_time}})
 
             return
 
