@@ -377,26 +377,36 @@ void getManu(char *mac, char *manu, int len)
 
     strip_mac(mac, mac6, sizeof(mac6));
     mac6[6] = '\0';
-    memset(manu,0,len);
 
-    sprintf(cmd,"/bin/grep -q %s oui.txt",mac6);
+    if (len <= 20) {
+        LOG("manu is too small");
+    } else {
+        memset(manu,0,len);
+    }
 
-    if(system(cmd))
-    {
+    bool ismatch = false;
+    memset(buffer,0,sizeof(buffer));
+    FILE *fp = fopen("oui.txt", "r");
+    while(fgets(buffer, sizeof(buffer), fp)) {
+        if (strncmp(mac6, buffer, 6) == 0) {
+            // The longest manu name cannot exceed 20 characters, manu index is begin+22
+            strlcpy(manu, buffer+22, 20);
+            manu[20] = '\0';
+            // strip '\n'
+            strip(manu, manu, len);
+            ismatch = true;
+            break;
+        }
+    }
+    if (fclose(fp)) {
+        LOG("fclose fail");
+    }
+
+    if ( !ismatch ) {
         strcpy(manu,"UnKnow");
     }
-    else
-    {
-        memset(buffer,0,sizeof(buffer));
-        sprintf(cmd,"/bin/grep %s oui.txt | sed  -e 's/.*16)[[:blank:]]*//g' -e 's/.*hex)[[:blank:]]*//g' | cut -c 1-20 ",mac6);
-        if((pManu = popen(cmd, "r")) == NULL)
-            LOG("popen error");
-
-        fread(buffer,1,sizeof(buffer),pManu);
-        strip(buffer, manu, len);
-        if(pclose(pManu) == -1)
-            LOG("Close Fail");
-    }
+        
+    return;
 }
 
 bool getApName(int fpOut, fd_set *pset, char * apname)   
