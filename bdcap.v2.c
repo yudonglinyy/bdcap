@@ -31,7 +31,7 @@ void strip(const char *strIn, char *strOut, int len);
 int compile_pattern(regex_t *reg, const char *pattern);
 bool match(char *src, regex_t *reg, char *destBuf, size_t length );
 void getManu(char *mac, char *manu, int len);
-bool getApName(int fpOut, fd_set *pset, char * apname);
+bool getApName(const int fpOut, const fd_set *pset, char * apname);
 static char * getnowdate(char *date);
 int strip_mac(char *macname, char *mac6, int len);
 
@@ -220,7 +220,7 @@ void start_sniff(int filenum)
         }
 
         match(out, &reg, macname, sizeof(macname));     //get macname
-        getManu(macname, manu, sizeof(manu));           //get manu
+        getManu(macname, manu, sizeof(manu));           //get manu  
         getApName(fpOut, &set, apname);                         //get apname
         getnowdate(timebuf);                            //get timebuf
         linenum++;
@@ -390,7 +390,7 @@ void getManu(char *mac, char *manu, int len)
     while(fgets(buffer, sizeof(buffer), fp)) {
         if (strncmp(mac6, buffer, 6) == 0) {
             // The longest manu name cannot exceed 20 characters, manu index is begin+22
-            strlcpy(manu, buffer+22, 20);
+            strncpy(manu, buffer+22, 20);
             manu[20] = '\0';
             // strip '\n'
             strip(manu, manu, len);
@@ -409,34 +409,47 @@ void getManu(char *mac, char *manu, int len)
     return;
 }
 
-bool getApName(int fpOut, fd_set *pset, char * apname)   
+bool getApName(const int fpOut, const fd_set *pset, char * apname)   
 {
-
     char buffer[1024]; 
     char out[1024];
+    bool firstline = true;
     int i, rv;
-    struct timeval timeout;
-    timeout.tv_sec = 3;
+    fd_set tmp_set;
+    struct timeval timeout, tmp_timeout;
+    timeout.tv_sec = 30;
     timeout.tv_usec = 0;
 
     FILE *pOut = fdopen(fpOut, "r");
 
     memset(buffer,0,sizeof(buffer));
 
-    for(i=0;i<3;i++)                        //read hex number to buffer
+    for(i=0;i<5;i++)                        //read hex number to buffer
     {
         memset(out,0,sizeof(out));
-        rv =select(fpOut+1, pset, NULL, NULL, &timeout);
+        tmp_set = *pset;
+        tmp_timeout = timeout;
+        rv =select(fpOut+1, &tmp_set, NULL, NULL, &tmp_timeout);
         if(rv == -1)
         {
             LOG("getapname select fail");
         } else if (rv == 0) {
-            LOG("getapname timeout");
+            LOGMSG("getapname timeout");
+            *apname = '\0';
+            return false;
         } else {
             if (fgets(out, sizeof(out), pOut) == NULL) {
                 LOG("fgets fail");
             }
         }
+
+        // find the first line which include '0x0000'
+        if (firstline && strstr(out, "0x0000") == NULL) {
+            continue;
+        } else {
+            firstline = false;
+        }
+
         strncpy(buffer+strlen(buffer),out+10,39);
     }
 
@@ -461,17 +474,29 @@ bool getApName(int fpOut, fd_set *pset, char * apname)
         if( ( *(pWifi-1) == 8 || *(pWifi-1) == 4 ) && *(pWifi-2) == 1)      // 0104 or 0108 is end
             break;
     }
+    
+    // have to len > 2
+    if (pWifi - wifiname <= 2) {
+        *apname = '\0';
+        return false;
+    }
+
     *(pWifi-2) = '\0';
     // printf("wifiname[0] : %d  wifiname[1] : %d\n", wifiname[0],wifiname[1]);
-    if(wifiname[0] == 0 && wifiname[1] != 0)                                //000x is start
+    pWifi = pWifi - 2 - 1;
+    while (wifiname < pWifi && *pWifi != '\0') {
+        pWifi--;
+    }
+
+    if(*(pWifi+1) > 1 && *(pWifi+1) < 16)                                //000x is start
     {
-        strcpy(apname,wifiname+2);
+        strcpy(apname,pWifi+2);
         return true;
     }
     else
     {
         *apname = '\0';
-        return 0;
+        return false;
     }
 }
 
